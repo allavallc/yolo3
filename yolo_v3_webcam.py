@@ -1,10 +1,17 @@
+#Note, this code requries that opencv-python is using version 4.5.1.48, otherwise there are code errors
+
 import cv2 as cv
 import numpy as np
+import time
 
 cap = cv.VideoCapture(0)
 whT = 320
 confThreshold = 0.5
 nmsThreshold = 0.2
+
+#for framerate
+pTime = 0
+cTime = 0
 
 #### LOAD MODEL
 ## Coco Names
@@ -12,7 +19,8 @@ classesFile = "coco.names"
 classNames = []
 with open(classesFile, 'rt') as f:
     classNames = f.read().rstrip('\n').split('\n')
-print(classNames)
+#print(classNames)
+
 ## Model Files
 #modelConfiguration = "yolov3-320.cfg"
 #modelWeights = "yolov3-320.weights"
@@ -42,8 +50,10 @@ def findObjects(outputs, img):
                 confs.append(float(confidence))
 
     indices = cv.dnn.NMSBoxes(bbox, confs, confThreshold, nmsThreshold)
+    #print(indices)
 
     for i in indices:
+        #print(i)
         i = i[0]
         box = bbox[i]
         x, y, w, h = box[0], box[1], box[2], box[3]
@@ -59,9 +69,19 @@ while True:
     blob = cv.dnn.blobFromImage(img, 1 / 255, (whT, whT), [0, 0, 0], 1, crop=False)
     net.setInput(blob)
     layersNames = net.getLayerNames()
+
     outputNames = [(layersNames[i[0] - 1]) for i in net.getUnconnectedOutLayers()]
+
     outputs = net.forward(outputNames)
     findObjects(outputs, img)
+
+    #calculate the framerate
+    cTime = time.time()
+    fps = 1 / (cTime - pTime)
+    pTime = cTime
+
+    #cv.putText(img, str(int(fps)), (25,25), cv.FONT_ITALIC, 1, (255, 0, 255), 3)
+    print(fps)
 
     cv.imshow('Image', img)
     cv.waitKey(1)
